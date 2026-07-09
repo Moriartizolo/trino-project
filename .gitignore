@@ -1,0 +1,21 @@
+# Docker volumes (не пушим большие данные!)
+trino-data/
+postgres_data/
+minio_data/
+docker-debug/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Secrets
+*.env
+*.secret

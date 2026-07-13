@@ -1,0 +1,21 @@
+---
+startDelaySeconds: 0
+ssl: false
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+rules:
+  - pattern: 'trino.execution<(.*)><>(.*):'
+    name: trino_execution_$1_$2
+    type: GAUGE
+  - pattern: 'trino.memory<(.*)><>(.*):'
+    name: trino_memory_$1_$2
+    type: GAUGE
+  - pattern: 'trino.failuredetector<(.*)><>(.*):'
+    name: trino_failuredetector_$1_$2
+    type: GAUGE
+  - pattern: 'java.lang<type=Memory><(.*)> (.*):'
+    name: jvm_memory_$1_$2
+    type: GAUGE
+  - pattern: 'java.lang<type=GarbageCollector, name=(.*)><>(.*):'
+    name: jvm_gc_$1_$2
+    type: GAUGE

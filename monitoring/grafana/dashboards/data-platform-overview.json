@@ -1,0 +1,216 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "targets": [
+        {
+          "expr": "trino_execution_querymanager_runningqueries",
+          "legendFormat": "running queries",
+          "refId": "A"
+        },
+        {
+          "expr": "trino_execution_querymanager_queuedqueries",
+          "legendFormat": "queued queries",
+          "refId": "B"
+        }
+      ],
+      "title": "Trino Queries",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "jvm_memory_heapmemoryusage_used",
+          "legendFormat": "heap used",
+          "refId": "A"
+        },
+        {
+          "expr": "jvm_memory_heapmemoryusage_max",
+          "legendFormat": "heap max",
+          "refId": "B"
+        }
+      ],
+      "title": "Trino JVM Heap",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "up{job=\"trino\"}",
+          "legendFormat": "trino",
+          "refId": "A"
+        },
+        {
+          "expr": "up{job=\"postgres\"}",
+          "legendFormat": "postgres",
+          "refId": "B"
+        },
+        {
+          "expr": "up{job=\"minio\"}",
+          "legendFormat": "minio",
+          "refId": "C"
+        }
+      ],
+      "title": "Service Availability",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "minio_cluster_capacity_usable_total_bytes",
+          "legendFormat": "total",
+          "refId": "A"
+        },
+        {
+          "expr": "minio_cluster_capacity_usable_free_bytes",
+          "legendFormat": "free",
+          "refId": "B"
+        }
+      ],
+      "title": "MinIO Storage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "pg_stat_database_numbackends{datname=\"iceberg_meta\"}",
+          "legendFormat": "connections",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(pg_stat_database_xact_commit{datname=\"iceberg_meta\"}[5m])",
+          "legendFormat": "commits/sec",
+          "refId": "B"
+        }
+      ],
+      "title": "PostgreSQL",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["trino", "data-platform"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "title": "Data Platform Overview",
+  "uid": "data-platform-overview",
+  "version": 1
+}

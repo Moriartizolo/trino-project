@@ -37,12 +37,12 @@
       },
       "targets": [
         {
-          "expr": "trino_execution_querymanager_runningqueries",
+          "expr": "trino_execution_name_querymanager_runningqueries",
           "legendFormat": "running queries",
           "refId": "A"
         },
         {
-          "expr": "trino_execution_querymanager_queuedqueries",
+          "expr": "trino_execution_name_querymanager_queuedqueries",
           "legendFormat": "queued queries",
           "refId": "B"
         }
@@ -73,12 +73,12 @@
       "id": 2,
       "targets": [
         {
-          "expr": "jvm_memory_heapmemoryusage_used",
+          "expr": "jvm_memory_bytes_used{area=\"heap\", job=\"trino\"}",
           "legendFormat": "heap used",
           "refId": "A"
         },
         {
-          "expr": "jvm_memory_heapmemoryusage_max",
+          "expr": "jvm_memory_bytes_max{area=\"heap\", job=\"trino\"}",
           "legendFormat": "heap max",
           "refId": "B"
         }
@@ -212,5 +212,5 @@
   },
   "title": "Data Platform Overview",
   "uid": "data-platform-overview",
-  "version": 1
+  "version": 2
 }

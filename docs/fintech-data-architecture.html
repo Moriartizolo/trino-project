@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fintech Data Architecture — trino-project</title>
+  <style>
+    @page { size: A4; margin: 14mm 14mm 16mm 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: #1a1a2e;
+      line-height: 1.45;
+      font-size: 10pt;
+      margin: 0;
+      background: #fff;
+    }
+    .cover {
+      page-break-after: always;
+      min-height: 255mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 20mm 12mm;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 55%, #0ea5e9 100%);
+      color: #fff;
+    }
+    .cover .badge {
+      display: inline-block;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.25);
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 8pt;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      width: fit-content;
+    }
+    .cover h1 { font-size: 24pt; margin: 0 0 10px; line-height: 1.15; }
+    .cover p { font-size: 11pt; max-width: 150mm; color: #e2e8f0; margin: 0 0 20px; }
+    .cover .meta { font-size: 9pt; color: #cbd5e1; }
+    h2 {
+      color: #0f172a;
+      font-size: 13pt;
+      margin: 18px 0 8px;
+      padding-bottom: 4px;
+      border-bottom: 2px solid #0ea5e9;
+      page-break-after: avoid;
+    }
+    h3 { color: #1e3a5f; font-size: 10.5pt; margin: 14px 0 6px; page-break-after: avoid; }
+    p { margin: 6px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px;
+      font-size: 8.5pt;
+      page-break-inside: avoid;
+    }
+    thead th {
+      background: #0f172a;
+      color: #fff;
+      text-align: left;
+      padding: 6px 8px;
+      font-weight: 600;
+    }
+    tbody td {
+      border: 1px solid #dbe4ee;
+      padding: 5px 8px;
+      vertical-align: top;
+    }
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    .flow {
+      background: #f1f5f9;
+      border: 1px solid #dbe4ee;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 8.5pt;
+      line-height: 1.6;
+      white-space: pre-line;
+      page-break-inside: avoid;
+    }
+    .note {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 8.5pt;
+      color: #1e3a8a;
+      page-break-inside: avoid;
+    }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 8.5pt;
+      background: #f1f5f9;
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    .footer {
+      margin-top: 16px;
+      padding-top: 8px;
+      border-top: 1px solid #dbe4ee;
+      font-size: 8pt;
+      color: #64748b;
+      text-align: center;
+    }
+    .layer-table td:first-child { font-weight: 600; white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="badge">trino-project · Fintech MVP</div>
+  <h1>Архитектура данных<br>fintech.transactions</h1>
+  <p>Трёхслойное хранение транзакций: PostgreSQL (операционка), Iceberg/MinIO (data lake), ClickHouse (аналитика). Единая точка SQL — Trino.</p>
+  <div class="meta">Проект: trino-project · Июль 2026</div>
+</section>
+
+<section>
+  <h2>Общая схема</h2>
+  <div class="flow">Kafka (topic: transactions)
+        ↓
+   kafka-consumer
+        ├── PostgreSQL   fintech.transactions
+        ├── Iceberg/MinIO fintech.transaction_facts
+        └── ClickHouse   fintech.transaction_analytics
+
+Trino — SQL-доступ ко всем трём хранилищам</div>
+
+  <table class="layer-table">
+    <thead>
+      <tr><th>Слой</th><th>Хранилище</th><th>Роль</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>PostgreSQL</td><td>Операционный реестр — что произошло</td></tr>
+      <tr><td>2</td><td>MinIO + Iceberg</td><td>Data lake — полная копия всех полей</td></tr>
+      <tr><td>3</td><td>ClickHouse</td><td>Аналитика — срез для Grafana</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note"><strong>Связь:</strong> <code>transaction_id</code> — общий ключ во всех трёх таблицах.</div>
+</section>
+
+<section>
+  <h2>Таблица 1 — PostgreSQL (операционка)</h2>
+  <h3><code>fintech.transactions</code> · Trino: <code>postgres.fintech.transactions</code></h3>
+  <p>10 колонок — без сумм, рисков и сегментов.</p>
+  <table>
+    <thead><tr><th>Колонка</th><th>Тип</th><th>Зачем</th></tr></thead>
+    <tbody>
+      <tr><td>transaction_id</td><td>BIGINT PK</td><td>ID транзакции</td></tr>
+      <tr><td>customer_id</td><td>BIGINT</td><td>Клиент</td></tr>
+      <tr><td>transaction_time</td><td>TIMESTAMP</td><td>Время операции</td></tr>
+      <tr><td>currency</td><td>VARCHAR(3)</td><td>Валюта</td></tr>
+      <tr><td>channel</td><td>VARCHAR(32)</td><td>Канал (mobile, atm, card…)</td></tr>
+      <tr><td>operation_type</td><td>VARCHAR(32)</td><td>Тип операции</td></tr>
+      <tr><td>status</td><td>VARCHAR(16)</td><td>Статус (success / declined…)</td></tr>
+      <tr><td>country</td><td>VARCHAR(64)</td><td>Страна</td></tr>
+      <tr><td>processing_time_ms</td><td>INT</td><td>SLA обработки</td></tr>
+      <tr><td>created_at</td><td>TIMESTAMP</td><td>Время загрузки</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section style="page-break-before: always;">
+  <h2>Таблица 2 — Iceberg / MinIO (полный архив)</h2>
+  <h3><code>fintech.transaction_facts</code> · Trino: <code>iceberg.fintech.transaction_facts</code></h3>
+  <p>Denormalized-таблица — источник истины для истории и data lake. 20 колонок. Файлы parquet в <code>s3://iceberg-bucket-warehouse/</code>, метаданные в PostgreSQL (<code>iceberg_tables</code>).</p>
+  <table>
+    <thead><tr><th>Колонка</th><th>Тип</th><th>Откуда</th></tr></thead>
+    <tbody>
+      <tr><td>transaction_id</td><td>BIGINT</td><td>transactions</td></tr>
+      <tr><td>customer_id</td><td>BIGINT</td><td>transactions</td></tr>
+      <tr><td>transaction_time</td><td>TIMESTAMP</td><td>transactions</td></tr>
+      <tr><td>amount</td><td>DECIMAL(18,2)</td><td>transactions</td></tr>
+      <tr><td>currency</td><td>VARCHAR(3)</td><td>transactions</td></tr>
+      <tr><td>channel</td><td>VARCHAR(32)</td><td>transactions</td></tr>
+      <tr><td>operation_type</td><td>VARCHAR(32)</td><td>transactions</td></tr>
+      <tr><td>status</td><td>VARCHAR(16)</td><td>transactions</td></tr>
+      <tr><td>country</td><td>VARCHAR(64)</td><td>transactions</td></tr>
+      <tr><td>processing_time_ms</td><td>INT</td><td>transactions</td></tr>
+      <tr><td>customer_segment</td><td>VARCHAR(16)</td><td>customers</td></tr>
+      <tr><td>region</td><td>VARCHAR(64)</td><td>customers</td></tr>
+      <tr><td>customer_risk_level</td><td>VARCHAR(16)</td><td>customers</td></tr>
+      <tr><td>total_risk_score</td><td>INT</td><td>risk_results</td></tr>
+      <tr><td>transaction_risk_level</td><td>VARCHAR(16)</td><td>risk_results</td></tr>
+      <tr><td>final_decision</td><td>VARCHAR(16)</td><td>risk_results</td></tr>
+      <tr><td>fraud_detection_time_ms</td><td>INT</td><td>risk_results</td></tr>
+      <tr><td>triggered_rules_count</td><td>INT</td><td>risk_results</td></tr>
+      <tr><td>alerts_count</td><td>INT</td><td>antifraud_alerts</td></tr>
+      <tr><td>created_at</td><td>TIMESTAMP</td><td>—</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Таблица 3 — ClickHouse (аналитика)</h2>
+  <h3><code>fintech.transaction_analytics</code> · Trino: <code>clickhouse.fintech.transaction_analytics</code></h3>
+  <p>14 колонок — только поля для дашбордов и Grafana.</p>
+  <table>
+    <thead><tr><th>Колонка</th><th>Тип</th><th>Зачем</th></tr></thead>
+    <tbody>
+      <tr><td>transaction_id</td><td>UInt64</td><td>Связь с PG и Iceberg</td></tr>
+      <tr><td>customer_id</td><td>UInt64</td><td>Группировки по клиентам</td></tr>
+      <tr><td>transaction_time</td><td>DateTime</td><td>Временные графики</td></tr>
+      <tr><td>amount</td><td>Decimal(18,2)</td><td>SUM, AVG</td></tr>
+      <tr><td>customer_segment</td><td>String</td><td>Сегмент</td></tr>
+      <tr><td>region</td><td>String</td><td>Регион</td></tr>
+      <tr><td>customer_risk_level</td><td>String</td><td>Риск клиента</td></tr>
+      <tr><td>total_risk_score</td><td>Int32</td><td>Скор 0–100</td></tr>
+      <tr><td>transaction_risk_level</td><td>String</td><td>low / medium / high</td></tr>
+      <tr><td>final_decision</td><td>String</td><td>allow / review / block</td></tr>
+      <tr><td>fraud_detection_time_ms</td><td>Int32</td><td>Fraud Detection Time</td></tr>
+      <tr><td>triggered_rules_count</td><td>Int32</td><td>Число правил</td></tr>
+      <tr><td>alerts_count</td><td>Int32</td><td>Число алертов</td></tr>
+      <tr><td>created_at</td><td>DateTime</td><td>Время загрузки</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Поток данных</h2>
+  <div class="flow">1. Событие → Kafka (topic: transactions)
+2. kafka-consumer нормализует JSON
+3. INSERT → postgres.fintech.transactions       (10 полей)
+4. INSERT → iceberg.fintech.transaction_facts  (20 полей → MinIO)
+5. INSERT → clickhouse.fintech.transaction_analytics (14 полей)
+6. Trino — SQL-запросы и JOIN по transaction_id</div>
+
+  <div class="footer">trino-project · Fintech Data Architecture · 2026</div>
+</section>
+
+</body>
+</html>

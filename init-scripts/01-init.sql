@@ -24,19 +24,6 @@ CREATE TABLE IF NOT EXISTS iceberg_tables (
     PRIMARY KEY (catalog_name, table_namespace, table_name)
 );
 
--- Демо-таблица для проверки PostgreSQL-каталога в Trino
-CREATE TABLE IF NOT EXISTS demo_users (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-INSERT INTO demo_users (name, email) VALUES
-    ('Alice', 'alice@example.com'),
-    ('Bob', 'bob@example.com')
-ON CONFLICT (email) DO NOTHING;
-
 GRANT ALL PRIVILEGES ON DATABASE iceberg_meta TO trino;
 GRANT ALL PRIVILEGES ON SCHEMA public TO trino;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO trino;

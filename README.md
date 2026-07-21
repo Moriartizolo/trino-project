@@ -183,7 +183,9 @@ trino-project/
 ├── init-scripts/
 │   ├── 01-init.sql              # PostgreSQL: Iceberg metadata + user trino
 │   ├── 02-fintech-transactions.sql
-│   └── trino/01-iceberg-fintech.sql
+│   └── trino/
+│       ├── 01-iceberg-schema.sql
+│       └── 02-iceberg-seed.sql   # seed только если данных ещё нет
 ├── clickhouse/init/01-init.sql
 ├── pipelines/consumer/          # Kafka → PG + Iceberg + ClickHouse
 ├── trino-catalog/               # postgres, iceberg, clickhouse

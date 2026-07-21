@@ -155,17 +155,48 @@ services:
     entrypoint: ["/bin/bash", "-c"]
     command:
       - |
-        set -e
+        set -eu
+        trino_run() {
+          output=$$(trino --server http://trino:8081 "$$@" 2>&1) || { echo "$$output"; return 1; }
+          echo "$$output"
+          echo "$$output" | grep -qiE 'Query .* failed:|SQL statement failed' && return 1
+          return 0
+        }
+        trino_count() {
+          trino --server http://trino:8081 --output-format=CSV_UNQUOTED --execute \
+            "SELECT count(*) FROM iceberg.fintech.transaction_facts" | tail -n 1
+        }
         echo "Waiting for Trino to accept SQL..."
-        for i in $$(seq 1 30); do
-          if trino --server http://trino:8081 --execute "SELECT 1" >/dev/null 2>&1; then
-            break
+        ready=false
+        for i in $$(seq 1 60); do
+          if trino_run --execute "SELECT 1" >/dev/null; then
+            sleep 5
+            if trino_run --execute "SELECT 1" >/dev/null; then
+              ready=true
+              break
+            fi
           fi
-          echo "Trino not ready yet, retry $$i/30"
+          echo "Trino not ready yet, retry $$i/60"
           sleep 2
         done
-        echo "Creating Iceberg schema and seed data..."
-        trino --server http://trino:8081 --file /scripts/01-iceberg-fintech.sql
+        if [ "$$ready" != "true" ]; then echo "ERROR: Trino did not become ready"; exit 1; fi
+        echo "Creating Iceberg schema..."
+        trino_run --file /scripts/01-iceberg-schema.sql >/dev/null
+        echo "Seeding Iceberg test data (skip if already present)..."
+        seeded=false
+        for i in $$(seq 1 10); do
+          if trino_run --file /scripts/02-iceberg-seed.sql >/dev/null; then
+            count=$$(trino_count)
+            if [ "$${count:-0}" -gt 0 ]; then
+              seeded=true
+              echo "Iceberg has $$count row(s)"
+              break
+            fi
+          fi
+          echo "Seed attempt $$i/10 failed or table still empty, retry in 3s..."
+          sleep 3
+        done
+        if [ "$$seeded" != "true" ]; then echo "ERROR: Iceberg seed failed, table is empty"; exit 1; fi
         echo "Iceberg init completed"
     networks:
       - data-platform
